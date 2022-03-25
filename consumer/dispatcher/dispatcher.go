@@ -122,7 +122,7 @@ func WithFinalizer(finalizer func()) option {
 // by the upstream dispatcher in Factory.SpawnChild call.
 func Spawn(parentActDesc *actor.Descriptor, factory Factory, cfg *config.Proxy, options ...option) *T {
 	d := &T{
-		actDesc:    parentActDesc.NewChild("disp"),
+		actDesc:    parentActDesc.NewChild("dispatcher"),
 		cfg:        cfg,
 		factory:    factory,
 		children:   make(map[Key]chan consumer.Request),
@@ -192,6 +192,16 @@ func (d *T) run() {
 					disposalCh: d.disposalCh,
 				})
 				d.children[key] = childRequestsCh
+			}
+			queued := len(childRequestsCh)
+			if queued > d.cfg.Consumer.ChannelBufferSize/2 {
+				d.actDesc.Log().Infof(
+					"!!!!!!!!!!!!!!!!!!!! Currently have %d/%d requests queued to %s/%s !!!!!!!!!!!!!!!!!!!!",
+					queued,
+					d.cfg.Consumer.ChannelBufferSize,
+					d.actDesc.String(),
+					key,
+				)
 			}
 			// If the requests buffer is full then either the callers are
 			// pulling too aggressively or the Kafka is experiencing issues.

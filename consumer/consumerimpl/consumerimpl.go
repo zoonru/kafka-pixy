@@ -47,7 +47,7 @@ func Spawn(parentActDesc *actor.Descriptor, cfg *config.Proxy, offsetMgrF offset
 	}
 
 	c := &t{
-		actDesc:    parentActDesc.NewChild("cons"),
+		actDesc:    parentActDesc.NewChild("consumer"),
 		cfg:        cfg,
 		kafkaClt:   kafkaClt,
 		offsetMgrF: offsetMgrF,

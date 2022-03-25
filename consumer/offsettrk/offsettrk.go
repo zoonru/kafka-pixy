@@ -191,6 +191,7 @@ func (ot *T) shouldWait4Ack(now time.Time) time.Duration {
 	var maxTimeout time.Duration
 	var validOffersCount = 0
 	for _, o := range ot.offers {
+		ot.actDesc.Log().Errorf("Not acked: offset=%d", o.msg.Offset)
 		if o.deadline.After(now) {
 			validOffersCount++
 			timeout := o.deadline.Sub(now)
