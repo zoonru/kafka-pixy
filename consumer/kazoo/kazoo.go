@@ -10,6 +10,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/mailgun/kafka-pixy/none"
+	"github.com/mailgun/kafka-pixy/prettyfmt"
 	"github.com/pkg/errors"
 	"github.com/samuel/go-zookeeper/zk"
 	"github.com/sirupsen/logrus"
@@ -219,8 +220,8 @@ func (m *Model) partitionOwnerZNodePath(topic string, partition int32) string {
 
 func (m *Model) forwardWatch(ctx context.Context, alias string, fromCh <-chan zk.Event, toCh chan<- none.T) {
 	select {
-	case <-fromCh:
-		m.log.Infof("Watch triggered: alias=%s", alias)
+	case e := <-fromCh:
+		m.log.Infof("Watch triggered: alias=%s, event=%s", alias, prettyfmt.Val(e))
 		select {
 		case toCh <- none.V:
 		case <-ctx.Done():
