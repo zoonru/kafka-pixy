@@ -106,13 +106,12 @@ func (pc *T) IsSafe2Stop() bool {
 // implements `multiplexer.In`
 func (pc *T) Stop() {
 	close(pc.stopCh)
-	close(pc.cancelAcquireCh)
 	pc.wg.Wait()
 }
 
 func (pc *T) run() {
 	defer close(pc.messagesCh)
-	defer pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.cancelAcquireCh)()
+	defer pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.cancelAcquireCh, pc.stopCh)()
 
 	var err error
 	if pc.offsetMgr, err = pc.offsetMgrF.Spawn(pc.actDesc, pc.group, pc.topic, pc.partition); err != nil {
@@ -123,6 +122,8 @@ func (pc *T) run() {
 	// Wait for the initial offset to be retrieved or a stop signal.
 	select {
 	case pc.committedOffset = <-pc.offsetMgr.CommittedOffsets():
+	case <-pc.stopCh:
+		return
 	case <-pc.cancelAcquireCh:
 		return
 	}
