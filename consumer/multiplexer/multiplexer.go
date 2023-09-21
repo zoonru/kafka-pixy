@@ -10,6 +10,7 @@ import (
 	"github.com/mailgun/kafka-pixy/actor"
 	"github.com/mailgun/kafka-pixy/consumer"
 	"github.com/mailgun/kafka-pixy/none"
+	"golang.org/x/exp/slices"
 )
 
 // T fetches messages from inputs and multiplexes them to the output, giving
@@ -123,7 +124,7 @@ func (m *T) WireUp(output Out, assigned []int32) {
 
 	// Stop inputs that are not assigned anymore.
 	for p, in := range m.inputs {
-		if !hasPartition(p, assigned) {
+		if !slices.Contains(assigned, p) {
 			wg.Add(1)
 			go func(in *input) {
 				defer wg.Done()
@@ -288,12 +289,4 @@ func makeSortedIns(inputs map[int32]*input) []*input {
 		sortedIns[i] = inputs[p]
 	}
 	return sortedIns
-}
-
-func hasPartition(partition int32, partitions []int32) bool {
-	count := len(partitions)
-	if count == 0 {
-		return false
-	}
-	return partitions[0] <= partition && partition <= partitions[count-1]
 }

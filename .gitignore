@@ -28,3 +28,4 @@ _testmain.go
 
 kafka-pixy
 .vagrant/
+main

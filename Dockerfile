@@ -9,5 +9,6 @@ RUN go build -v -o /go/bin/kafka-pixy
 FROM alpine:3.11
 LABEL maintainer="Maxim Vladimirskiy <horkhe@gmail.com>"
 COPY --from=builder /go/bin/kafka-pixy /usr/bin/kafka-pixy
+COPY ./entrypoint.sh /entrypoint.sh
 EXPOSE 19091 19092
-ENTRYPOINT ["/usr/bin/kafka-pixy"]
+ENTRYPOINT ["/entrypoint.sh"]
