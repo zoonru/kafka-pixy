@@ -211,6 +211,9 @@ func (gc *T) rebalance(actDesc *actor.Descriptor, topicConsumers map[string]*top
 	}
 	actDesc.Log().Infof("assigned partitions: %s", prettyfmt.Val(assignedPartitions))
 	var wg sync.WaitGroup
+	actDesc.Log().Infof("waiting before assigning partitions...")
+	time.Sleep(10 * time.Second)
+	actDesc.Log().Infof("NOW assigning partitions...")
 	// Stop consuming partitions that are no longer assigned to this group
 	// and start consuming newly assigned partitions for topics that has been
 	// consumed already.
