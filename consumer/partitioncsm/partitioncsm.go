@@ -55,6 +55,8 @@ type T struct {
 	offsetTrk       *offsettrk.T
 	offerCount      int32
 
+	cancelAcquireCh chan none.T
+
 	// For tests only!
 	firstMsgFetched bool
 }
@@ -62,23 +64,25 @@ type T struct {
 // Spawn creates a partition consumer instance and starts its goroutines.
 func Spawn(parentActDesc *actor.Descriptor, group, topic string, partition int32, cfg *config.Proxy,
 	groupMember *subscriber.T, msgFetcherF msgfetcher.Factory, offsetMgrF offsetmgr.Factory,
+	cancelAcquireCh chan none.T,
 ) *T {
 	actDesc := parentActDesc.NewChild(fmt.Sprintf("%s.p%d", topic, partition))
 	actDesc.AddLogField("kafka.group", group)
 	actDesc.AddLogField("kafka.topic", topic)
 	actDesc.AddLogField("kafka.partition", partition)
 	pc := &T{
-		actDesc:     actDesc,
-		cfg:         cfg,
-		group:       group,
-		topic:       topic,
-		partition:   partition,
-		groupMember: groupMember,
-		msgFetcherF: msgFetcherF,
-		offsetMgrF:  offsetMgrF,
-		messagesCh:  make(chan consumer.Message, 1),
-		eventsCh:    make(chan consumer.Event, 1),
-		stopCh:      make(chan none.T),
+		actDesc:         actDesc,
+		cfg:             cfg,
+		group:           group,
+		topic:           topic,
+		partition:       partition,
+		groupMember:     groupMember,
+		msgFetcherF:     msgFetcherF,
+		offsetMgrF:      offsetMgrF,
+		messagesCh:      make(chan consumer.Message, 1),
+		eventsCh:        make(chan consumer.Event, 1),
+		stopCh:          make(chan none.T),
+		cancelAcquireCh: cancelAcquireCh,
 	}
 	actor.Spawn(pc.actDesc, &pc.wg, pc.run)
 	return pc
@@ -102,12 +106,13 @@ func (pc *T) IsSafe2Stop() bool {
 // implements `multiplexer.In`
 func (pc *T) Stop() {
 	close(pc.stopCh)
+	close(pc.cancelAcquireCh)
 	pc.wg.Wait()
 }
 
 func (pc *T) run() {
 	defer close(pc.messagesCh)
-	defer pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.stopCh)()
+	defer pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.cancelAcquireCh)()
 
 	var err error
 	if pc.offsetMgr, err = pc.offsetMgrF.Spawn(pc.actDesc, pc.group, pc.topic, pc.partition); err != nil {
@@ -118,7 +123,7 @@ func (pc *T) run() {
 	// Wait for the initial offset to be retrieved or a stop signal.
 	select {
 	case pc.committedOffset = <-pc.offsetMgr.CommittedOffsets():
-	case <-pc.stopCh:
+	case <-pc.cancelAcquireCh:
 		return
 	}
 	pc.actDesc.Log().Infof("Initial offset: %s", offsetRepr(pc.committedOffset))

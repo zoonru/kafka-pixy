@@ -16,6 +16,7 @@ import (
 	"github.com/mailgun/kafka-pixy/consumer/partitioncsm"
 	"github.com/mailgun/kafka-pixy/consumer/subscriber"
 	"github.com/mailgun/kafka-pixy/consumer/topiccsm"
+	"github.com/mailgun/kafka-pixy/none"
 	"github.com/mailgun/kafka-pixy/offsetmgr"
 	"github.com/mailgun/kafka-pixy/prettyfmt"
 	"github.com/pkg/errors"
@@ -40,8 +41,10 @@ type T struct {
 	topicCsmCh  chan *topiccsm.T
 	wg          sync.WaitGroup
 
-	multiplexersMu sync.Mutex
-	multiplexers   map[string]*multiplexer.T
+	multiplexersMu  sync.Mutex
+	multiplexers    map[string]*multiplexer.T
+	cancelAcquireMu sync.Mutex
+	cancelAcquireCh chan none.T
 }
 
 func Spawn(parentActDesc *actor.Descriptor, childSpec dispatcher.ChildSpec,
@@ -51,14 +54,15 @@ func Spawn(parentActDesc *actor.Descriptor, childSpec dispatcher.ChildSpec,
 	actDesc := parentActDesc.NewChild(fmt.Sprintf("%s", group))
 	actDesc.AddLogField("kafka.group", group)
 	gc := &T{
-		actDesc:      actDesc,
-		cfg:          cfg,
-		group:        group,
-		kafkaClt:     kafkaClt,
-		zkConn:       zkConn,
-		offsetMgrF:   offsetMgrF,
-		multiplexers: make(map[string]*multiplexer.T),
-		topicCsmCh:   make(chan *topiccsm.T, cfg.Consumer.ChannelBufferSize),
+		actDesc:         actDesc,
+		cfg:             cfg,
+		group:           group,
+		kafkaClt:        kafkaClt,
+		zkConn:          zkConn,
+		offsetMgrF:      offsetMgrF,
+		multiplexers:    make(map[string]*multiplexer.T),
+		topicCsmCh:      make(chan *topiccsm.T, cfg.Consumer.ChannelBufferSize),
+		cancelAcquireCh: make(chan none.T),
 	}
 
 	gc.subscriber = subscriber.Spawn(gc.actDesc, gc.group, gc.cfg, gc.zkConn)
@@ -214,6 +218,13 @@ func (gc *T) rebalance(actDesc *actor.Descriptor, topicConsumers map[string]*top
 	actDesc.Log().Infof("waiting before assigning partitions...")
 	time.Sleep(10 * time.Second)
 	actDesc.Log().Infof("NOW assigning partitions...")
+
+	gc.cancelAcquireMu.Lock()
+	close(gc.cancelAcquireCh)
+	gc.cancelAcquireCh = make(chan none.T)
+	cancelAcquireCh := gc.cancelAcquireCh
+	gc.cancelAcquireMu.Unlock()
+
 	// Stop consuming partitions that are no longer assigned to this group
 	// and start consuming newly assigned partitions for topics that has been
 	// consumed already.
@@ -232,7 +243,7 @@ func (gc *T) rebalance(actDesc *actor.Descriptor, topicConsumers map[string]*top
 		topic := topic
 		spawnInFn := func(partition int32) multiplexer.In {
 			return partitioncsm.Spawn(gc.actDesc, gc.group, topic, partition,
-				gc.cfg, gc.subscriber, gc.msgFetcherF, gc.offsetMgrF)
+				gc.cfg, gc.subscriber, gc.msgFetcherF, gc.offsetMgrF, cancelAcquireCh)
 		}
 		mux = multiplexer.New(gc.actDesc, spawnInFn)
 		gc.rewireMuxAsync(topic, &wg, mux, tc, assignedTopicPartitions)
