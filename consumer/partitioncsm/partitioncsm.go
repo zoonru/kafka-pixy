@@ -125,6 +125,7 @@ func (pc *T) run() {
 	case <-pc.stopCh:
 		return
 	case <-pc.cancelAcquireCh:
+		pc.actDesc.Log().Infof("Cancelled acquiring of partition")
 		return
 	}
 	pc.actDesc.Log().Infof("Initial offset: %s", offsetRepr(pc.committedOffset))
