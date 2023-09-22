@@ -112,6 +112,10 @@ func (pc *T) Stop() {
 func (pc *T) run() {
 	defer close(pc.messagesCh)
 	releasePartition := pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.cancelAcquireCh, pc.stopCh)
+	// Claiming was canceled
+	if releasePartition == nil {
+		return
+	}
 	defer releasePartition()
 
 	var err error
