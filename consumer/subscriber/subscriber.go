@@ -85,14 +85,13 @@ func (s *T) Subscriptions() <-chan map[string][]string {
 // ClaimPartition claims a topic/partition to be consumed by this member of the
 // consumer group. It blocks until either succeeds or canceled by the caller. It
 // returns a function that should be called to release the claim.
-func (s *T) ClaimPartition(claimerActDesc *actor.Descriptor, topic string, partition int32, cancelCh <-chan none.T, cancelCh2 <-chan none.T) func() {
+func (s *T) ClaimPartition(claimerActDesc *actor.Descriptor, topic string, partition int32, cancelCh <-chan none.T) func() {
 	pc := partitionClaimer{
 		subscriber: s,
 		actDesc:    claimerActDesc,
 		topic:      topic,
 		partition:  partition,
 		cancelCh:   cancelCh,
-		cancelCh2:  cancelCh2,
 	}
 	return pc.claim()
 }
@@ -215,7 +214,6 @@ type partitionClaimer struct {
 	topic      string
 	partition  int32
 	cancelCh   <-chan none.T
-	cancelCh2  <-chan none.T
 }
 
 func (pc *partitionClaimer) claim() func() {
@@ -244,9 +242,6 @@ func (pc *partitionClaimer) claim() func() {
 		case <-time.After(pc.subscriber.cfg.Consumer.RetryBackoff):
 		case <-pc.cancelCh:
 			logEntry.Errorf("Cancelling claiming of partition")
-			return nil
-		case <-pc.cancelCh2:
-			logEntry.Errorf("Cancelling claiming of partition (2)")
 			return nil
 		}
 	}

@@ -55,8 +55,6 @@ type T struct {
 	offsetTrk       *offsettrk.T
 	offerCount      int32
 
-	cancelAcquireCh chan none.T
-
 	// For tests only!
 	firstMsgFetched bool
 }
@@ -64,25 +62,23 @@ type T struct {
 // Spawn creates a partition consumer instance and starts its goroutines.
 func Spawn(parentActDesc *actor.Descriptor, group, topic string, partition int32, cfg *config.Proxy,
 	groupMember *subscriber.T, msgFetcherF msgfetcher.Factory, offsetMgrF offsetmgr.Factory,
-	cancelAcquireCh chan none.T,
 ) *T {
 	actDesc := parentActDesc.NewChild(fmt.Sprintf("%s.p%d", topic, partition))
 	actDesc.AddLogField("kafka.group", group)
 	actDesc.AddLogField("kafka.topic", topic)
 	actDesc.AddLogField("kafka.partition", partition)
 	pc := &T{
-		actDesc:         actDesc,
-		cfg:             cfg,
-		group:           group,
-		topic:           topic,
-		partition:       partition,
-		groupMember:     groupMember,
-		msgFetcherF:     msgFetcherF,
-		offsetMgrF:      offsetMgrF,
-		messagesCh:      make(chan consumer.Message, 1),
-		eventsCh:        make(chan consumer.Event, 1),
-		stopCh:          make(chan none.T),
-		cancelAcquireCh: cancelAcquireCh,
+		actDesc:     actDesc,
+		cfg:         cfg,
+		group:       group,
+		topic:       topic,
+		partition:   partition,
+		groupMember: groupMember,
+		msgFetcherF: msgFetcherF,
+		offsetMgrF:  offsetMgrF,
+		messagesCh:  make(chan consumer.Message, 1),
+		eventsCh:    make(chan consumer.Event, 1),
+		stopCh:      make(chan none.T),
 	}
 	actor.Spawn(pc.actDesc, &pc.wg, pc.run)
 	return pc
@@ -111,7 +107,7 @@ func (pc *T) Stop() {
 
 func (pc *T) run() {
 	defer close(pc.messagesCh)
-	releasePartition := pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.cancelAcquireCh, pc.stopCh)
+	releasePartition := pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.stopCh)
 	// Claiming was canceled
 	if releasePartition == nil {
 		return
@@ -128,8 +124,6 @@ func (pc *T) run() {
 	select {
 	case pc.committedOffset = <-pc.offsetMgr.CommittedOffsets():
 	case <-pc.stopCh:
-		return
-	case <-pc.cancelAcquireCh:
 		pc.actDesc.Log().Infof("Cancelled acquiring of partition")
 		return
 	}

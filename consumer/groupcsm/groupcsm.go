@@ -217,19 +217,15 @@ func (gc *T) rebalance(actDesc *actor.Descriptor, topicConsumers map[string]*top
 	var wg sync.WaitGroup
 	actDesc.Log().Infof("waiting before assigning partitions...")
 	time.Sleep(10 * time.Second)
-	actDesc.Log().Infof("NOW assigning partitions...")
-
-	gc.cancelAcquireMu.Lock()
-	close(gc.cancelAcquireCh)
-	gc.cancelAcquireCh = make(chan none.T)
-	cancelAcquireCh := gc.cancelAcquireCh
-	gc.cancelAcquireMu.Unlock()
+	actDesc.Log().Infof("LOCKING before assigning partitions...")
 
 	// Stop consuming partitions that are no longer assigned to this group
 	// and start consuming newly assigned partitions for topics that has been
 	// consumed already.
 	gc.multiplexersMu.Lock()
 	defer gc.multiplexersMu.Unlock()
+	actDesc.Log().Infof("NOW assigning partitions...")
+
 	for topic, mux := range gc.multiplexers {
 		gc.rewireMuxAsync(topic, &wg, mux, topicConsumers[topic], assignedPartitions[topic])
 	}
@@ -243,7 +239,7 @@ func (gc *T) rebalance(actDesc *actor.Descriptor, topicConsumers map[string]*top
 		topic := topic
 		spawnInFn := func(partition int32) multiplexer.In {
 			return partitioncsm.Spawn(gc.actDesc, gc.group, topic, partition,
-				gc.cfg, gc.subscriber, gc.msgFetcherF, gc.offsetMgrF, cancelAcquireCh)
+				gc.cfg, gc.subscriber, gc.msgFetcherF, gc.offsetMgrF)
 		}
 		mux = multiplexer.New(gc.actDesc, spawnInFn)
 		gc.rewireMuxAsync(topic, &wg, mux, tc, assignedTopicPartitions)
