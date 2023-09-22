@@ -111,7 +111,7 @@ func (pc *T) Stop() {
 
 func (pc *T) run() {
 	defer close(pc.messagesCh)
-	defer pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.cancelAcquireCh, pc.stopCh)()
+	pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.cancelAcquireCh, pc.stopCh)()
 
 	var err error
 	if pc.offsetMgr, err = pc.offsetMgrF.Spawn(pc.actDesc, pc.group, pc.topic, pc.partition); err != nil {
