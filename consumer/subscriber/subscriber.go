@@ -132,6 +132,7 @@ func (s *T) run() {
 		select {
 		case topics = <-s.topicsCh:
 			sort.Strings(topics)
+			s.actDesc.Log().Infof("Resubmit triggered by new topics=%v", topics)
 			shouldSubmitTopics = true
 
 		case nilOrSubscriptionsCh <- subscriptions:

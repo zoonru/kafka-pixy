@@ -163,6 +163,8 @@ func (gc *T) run() {
 				}
 				nilOrRetryCh = time.After(gc.cfg.Consumer.RetryBackoff)
 				rebalanceScheduled = true
+			} else {
+				gc.actDesc.Log().Info("rebalancing done")
 			}
 			if stopped {
 				goto done
