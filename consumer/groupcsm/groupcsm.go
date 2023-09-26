@@ -246,7 +246,7 @@ func (gc *T) rebalance(actDesc *actor.Descriptor, topicConsumers map[string]*top
 	}
 	// Notify the caller that rebalancing has completed successfully.
 	rebalanceResultCh <- nil
-	return
+	actDesc.Log().Infof("finished rebalancing partitions: %s", prettyfmt.Val(assignedPartitions))
 }
 
 // rewireMuxAsync calls muxInputs in another goroutine.
