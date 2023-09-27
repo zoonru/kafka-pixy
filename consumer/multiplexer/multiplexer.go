@@ -125,6 +125,7 @@ func (m *T) WireUp(output Out, assigned []int32) {
 	// Stop inputs that are not assigned anymore.
 	for p, in := range m.inputs {
 		if !slices.Contains(assigned, p) {
+			in := in
 			actor.Spawn(m.actDesc.NewChild(fmt.Sprintf("stop_unassigned.p%d", p)), &wg, func() {
 				in.Stop()
 			})
