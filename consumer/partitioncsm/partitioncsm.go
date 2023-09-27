@@ -247,6 +247,7 @@ func (pc *T) runFetchLoop() bool {
 			}
 		case pc.committedOffset = <-pc.offsetMgr.CommittedOffsets():
 		case <-pc.stopCh:
+			pc.actDesc.Log().Info("Closing after close signal inside fetch loop")
 			return false
 		}
 	}
