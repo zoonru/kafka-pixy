@@ -59,7 +59,7 @@ func (s *MultiplexerSuite) TestOneInput(c *C) {
 		),
 	}
 	out := newMockOut(100)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 
 	// When
@@ -95,7 +95,7 @@ func (s *MultiplexerSuite) TestSameLag(c *C) {
 			msg(4001, 1),
 		)}
 	out := newMockOut(100)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 
 	// When
@@ -136,7 +136,7 @@ func (s *MultiplexerSuite) TestRoundRobin(c *C) {
 		),
 	}
 	out := newMockOut(100)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	m.Stop()
 
 	// When
@@ -161,7 +161,7 @@ func (s *MultiplexerSuite) TestNoMessages(c *C) {
 		3: newMockIn(),
 	}
 	out := newMockOut(100)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	m.WireUp(out, []int32{1, 2, 3})
 
@@ -189,7 +189,7 @@ func (s *MultiplexerSuite) TestWireUp(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out := newMockOut(100)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 
@@ -216,7 +216,7 @@ func (s *MultiplexerSuite) TestWireUpAdd(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 	m.WireUp(out, []int32{2, 4})
@@ -247,7 +247,7 @@ func (s *MultiplexerSuite) TestWireUpRemove(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 	m.WireUp(out, []int32{2, 4})
@@ -274,7 +274,7 @@ func (s *MultiplexerSuite) TestWireUpAddRemove(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 	m.WireUp(out, []int32{2, 4})
@@ -302,7 +302,7 @@ func (s *MultiplexerSuite) TestWireUpSame(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 	m.WireUp(out, []int32{2, 4})
@@ -330,7 +330,7 @@ func (s *MultiplexerSuite) TestWireUpEmpty(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 	m.WireUp(out, []int32{2, 4})
@@ -356,7 +356,7 @@ func (s *MultiplexerSuite) TestWireUpNil(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 	m.WireUp(out, []int32{2, 4})
@@ -383,7 +383,7 @@ func (s *MultiplexerSuite) TestWireUpOutChanged(c *C) {
 	}
 	out1 := newMockOut(0)
 	out2 := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 	m.WireUp(out1, []int32{2, 4})
@@ -416,7 +416,7 @@ func (s *MultiplexerSuite) TestWireUpOutNil(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out1 := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	c.Assert(m.IsRunning(), Equals, false)
 	m.WireUp(out1, []int32{2, 4})
@@ -442,7 +442,7 @@ func (s *MultiplexerSuite) TestStop(c *C) {
 		5: newMockIn(msg(5001, 1)),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	m.WireUp(out, []int32{2, 4})
 	c.Assert(m.IsRunning(), Equals, true)
 
@@ -473,7 +473,7 @@ func (s *MultiplexerSuite) TestInputChanClose(c *C) {
 			msg(3003, 1)),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	defer m.Stop()
 	m.WireUp(out, []int32{1, 2, 3})
 	c.Assert(m.IsRunning(), Equals, true)
@@ -506,7 +506,7 @@ func (s *MultiplexerSuite) TestIsSafe2Stop(c *C) {
 		5: newMockIn(),
 	}
 	out := newMockOut(0)
-	m := New(s.ns, func(p int32) In { return ins[p] })
+	m := New(s.ns, func(p int32) In { return ins[p] }, "topic")
 	for i, tc := range []struct {
 		inputs    []int32
 		safe2Stop bool

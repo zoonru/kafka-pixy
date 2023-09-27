@@ -134,7 +134,9 @@ func (pc *T) run() {
 	pc.notifyTestInitialized(pc.committedOffset)
 
 	// Run a fetch loop until the partition consumer is signalled to stop.
+	pc.actDesc.Log().Info("Running fetch loop")
 	for pc.runFetchLoop() {
+		pc.actDesc.Log().Info("Restarting fetch loop")
 	}
 
 	pc.actDesc.Log().Info("Closing after close signal (2)")
