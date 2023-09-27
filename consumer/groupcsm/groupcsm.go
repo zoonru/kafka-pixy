@@ -241,7 +241,7 @@ func (gc *T) rebalance(actDesc *actor.Descriptor, topicConsumers map[string]*top
 			return partitioncsm.Spawn(gc.actDesc, gc.group, topic, partition,
 				gc.cfg, gc.subscriber, gc.msgFetcherF, gc.offsetMgrF)
 		}
-		mux = multiplexer.New(gc.actDesc, spawnInFn)
+		mux = multiplexer.New(gc.actDesc, spawnInFn, topic)
 		actDesc.Log().Infof("secondary rewiring spawn topic=%s", topic)
 		gc.rewireMuxAsync(topic, &wg, mux, tc, assignedTopicPartitions)
 		gc.multiplexers[topic] = mux

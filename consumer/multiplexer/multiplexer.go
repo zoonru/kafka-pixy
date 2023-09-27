@@ -56,9 +56,9 @@ type Out interface {
 type SpawnInFn func(partition int32) In
 
 // New creates a new multiplexer instance.
-func New(parentActDesc *actor.Descriptor, spawnInFn SpawnInFn) *T {
+func New(parentActDesc *actor.Descriptor, spawnInFn SpawnInFn, topic string) *T {
 	return &T{
-		actDesc:   parentActDesc.NewChild("mux"),
+		actDesc:   parentActDesc.NewChild("mux", topic),
 		inputs:    make(map[int32]*input),
 		spawnInFn: spawnInFn,
 		stopCh:    make(chan none.T),
