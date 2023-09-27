@@ -242,7 +242,9 @@ func (pc *partitionClaimer) claim() func() {
 		select {
 		case <-time.After(pc.subscriber.cfg.Consumer.RetryBackoff):
 		case <-pc.cancelCh:
-			return func() {}
+			logFailureFn("Failed to claim partition (CANCEL): via=%s, retries=%d, took=%s",
+				pc.subscriber.actDesc, retries, time.Since(beginAt))
+			return nil
 		}
 	}
 	pc.actDesc.Log().Infof("Partition claimed: via=%s, retries=%d, took=%s",

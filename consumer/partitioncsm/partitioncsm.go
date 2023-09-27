@@ -15,6 +15,7 @@ import (
 	"github.com/mailgun/kafka-pixy/consumer/subscriber"
 	"github.com/mailgun/kafka-pixy/none"
 	"github.com/mailgun/kafka-pixy/offsetmgr"
+	"github.com/mailgun/kafka-pixy/prettyfmt"
 	"github.com/pkg/errors"
 )
 
@@ -107,7 +108,11 @@ func (pc *T) Stop() {
 
 func (pc *T) run() {
 	defer close(pc.messagesCh)
-	defer pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.stopCh)()
+	release := pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.stopCh)
+	if release == nil {
+		return
+	}
+	defer release()
 
 	var err error
 	if pc.offsetMgr, err = pc.offsetMgrF.Spawn(pc.actDesc, pc.group, pc.topic, pc.partition); err != nil {
@@ -119,6 +124,7 @@ func (pc *T) run() {
 	select {
 	case pc.committedOffset = <-pc.offsetMgr.CommittedOffsets():
 	case <-pc.stopCh:
+		pc.actDesc.Log().Info("Closing after close signal (1)")
 		return
 	}
 	pc.actDesc.Log().Infof("Initial offset: %s", offsetRepr(pc.committedOffset))
@@ -131,10 +137,13 @@ func (pc *T) run() {
 	for pc.runFetchLoop() {
 	}
 
+	pc.actDesc.Log().Info("Closing after close signal (2)")
 	// Wait for clients to acknowledge pending offers.
 	for timeout := pc.offsetTrk.ShouldWait4Ack(); timeout > 0; timeout = pc.offsetTrk.ShouldWait4Ack() {
+		pc.actDesc.Log().Info("Closing after close signal (waiting for events)")
 		select {
 		case event := <-pc.eventsCh:
+			pc.actDesc.Log().Infof("Closing after close signal (event=%s)", prettyfmt.Val(event))
 			if event.T == consumer.EvAcked {
 				var offerCount int
 				pc.submittedOffset, offerCount = pc.offsetTrk.OnAcked(event.Offset)
@@ -142,9 +151,12 @@ func (pc *T) run() {
 				pc.offsetMgr.SubmitOffset(pc.submittedOffset)
 			}
 		case <-time.After(timeout):
+			pc.actDesc.Log().Info("Closing after close signal (TIMEOUT)")
 			continue
 		}
 	}
+
+	pc.actDesc.Log().Info("Closing after close signal (3)")
 }
 
 func (pc *T) runFetchLoop() bool {

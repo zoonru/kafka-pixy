@@ -1,6 +1,7 @@
 package multiplexer
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"sync"
@@ -111,11 +112,10 @@ func (m *T) WireUp(output Out, assigned []int32) {
 	// If output is not provided, then stop all inputs and return.
 	if output == nil {
 		for p, in := range m.inputs {
-			wg.Add(1)
-			go func(in *input) {
-				defer wg.Done()
+			in := in
+			actor.Spawn(m.actDesc.NewChild(fmt.Sprintf("stop_all.p%d", p)), &wg, func() {
 				in.Stop()
-			}(in)
+			})
 			delete(m.inputs, p)
 		}
 		wg.Wait()
@@ -125,11 +125,9 @@ func (m *T) WireUp(output Out, assigned []int32) {
 	// Stop inputs that are not assigned anymore.
 	for p, in := range m.inputs {
 		if !slices.Contains(assigned, p) {
-			wg.Add(1)
-			go func(in *input) {
-				defer wg.Done()
+			actor.Spawn(m.actDesc.NewChild(fmt.Sprintf("stop_unassigned.p%d", p)), &wg, func() {
 				in.Stop()
-			}(in)
+			})
 			delete(m.inputs, p)
 		}
 	}
