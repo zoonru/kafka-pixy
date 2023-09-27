@@ -110,6 +110,7 @@ func (pc *T) run() {
 	defer close(pc.messagesCh)
 	release := pc.groupMember.ClaimPartition(pc.actDesc, pc.topic, pc.partition, pc.stopCh)
 	if release == nil {
+		pc.actDesc.Log().Info("Closing after close signal (0)")
 		return
 	}
 	defer release()
